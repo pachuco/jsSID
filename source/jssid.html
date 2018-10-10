@@ -3,29 +3,35 @@
         <meta charset="UTF-8">
     </head>
     <body>
-        <script type="text/javascript" src="jsSID.js"></script>
+        <script type="text/javascript" src="jsSID-light.js"></script>
         <script type="text/javascript">
-            function getParam(param) {
-                var urlStr = location.search.substr(1);
-                var result = null;
-                var items = urlStr.split("&");
-                for (var i = 0; i < items.length; i++) {
-                    var item = items[i];
-                    if(item.substr(0, param.length) !== param) continue;
-                    result = item.split("=")[1];
-                    break;
-                }
-                return result;
-            }
+//-----------------------------------------
 
-            var sid = getParam("sid");
-            var subsong = getParam("subsong");
-            var model = getParam("model");
-            if (sid) {
-                SIDplayer = new jsSID(16384,0.0005);
-                if (model && model!="default") SIDplayer.setmodel(model);
-                SIDplayer.loadstart(sid, subsong?subsong:0);
-            }
+var SIDplayer;
+
+function getParam(param) {
+    var urlStr = location.search.substr(1);
+    var result = null;
+    var items = urlStr.split("&");
+    for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        if(item.substr(0, param.length) !== param) continue;
+        result = item.split("=")[1];
+        break;
+    }
+    return result;
+}
+
+var sid = getParam("sid");
+var subsong = getParam("subsong");
+var model = getParam("model");
+if (sid) {
+    SIDplayer = new jsSID(16384);
+    //if (model && model!="default") SIDplayer.setmodel(model);
+    SIDplayer.load(sid, subsong?subsong:0);
+}
+
+
         </script>
     </body>
 </html>
