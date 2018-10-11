@@ -159,7 +159,7 @@ function jsSID(_bufferlen) {
             var i,j, samp;
             var out0 = stream.getChannelData(0);
             var out1 = stream.getChannelData(1);
-            for(i=0;i<len;i+=2) {
+            for(i=0;i<len;i++) {
                 framecnt--; if (framecnt<=0) { framecnt=frame_sampleperiod; finished=0; PC=playaddr; SP=0xFF; } // printf("%d  %f\n",framecnt,playtime); }
                 if (finished==0) { 
                     while (CPUtime<=clock_ratio) {
