@@ -17,7 +17,7 @@ function jsSID(_bufferlen) {
     }
     
     sidcore = new LibJssidLight();
-    sidcore.init(ctx.sampleRate, 6581);
+    sidcore.init(ctx.sampleRate, -1);
     
     node.onaudioprocess = function(e) {
         sidcore.render(e.outputBuffer, bufferlen);
@@ -62,7 +62,7 @@ function jsSID(_bufferlen) {
         this.getinfo   = libcsid_getinfo;
         
         // Based of cSID light - an attempt at a usable simple API
-        // JS re-port by pachuco(in progress)
+        // JS re-port by pachuco
 
         // cSID by Hermit (Mihaly Horvath), (Year 2017) http://hermit.sidrip.com
         // (based on jsSID, this version has much lower CPU-usage, as mainloop runs at samplerate)
@@ -81,10 +81,10 @@ function jsSID(_bufferlen) {
         var DEFAULT_SAMPLERATE     = 44100.0; //(Soldier of Fortune, 2nd Reality, Alliance, X-tra energy, Jackal, Sanxion, Ultravox, Hard Track, Swing, Myth, LN3, etc.)
         var CLOCK_RATIO_DEFAULT    = C64_PAL_CPUCLK/DEFAULT_SAMPLERATE; //(50.0567520: lowest framerate where Sanxion is fine, and highest where Myth is almost fine)
         var VCR_SHUNT_6581         = 1500;    //kOhm //cca 1.5 MOhm Rshunt across VCR FET drain and source (causing 220Hz bottom cutoff with 470pF integrator capacitors in old C64)
-        var VCR_FET_TRESHOLD       = 192;     //Vth (on cutoff numeric range 0..2048) for the VCR cutoff-frequency control FET below which it doesn't conduct
+        var VCR_FET_TRESHOLD       = 350;     //Vth (on cutoff numeric range 0..2048) for the VCR cutoff-frequency control FET below which it doesn't conduct
         var CAP_6581               = 0.470;   //nF //filter capacitor value for 6581
-        var FILTER_DARKNESS_6581   = 22.0;    //the bigger the value, the darker the filter control is (that is, cutoff frequency increases less with the same cutoff-value)
-        var FILTER_DISTORTION_6581 = 0.0016;  //the bigger the value the more of resistance-modulation (filter distortion) is applied for 6581 cutoff-control
+        var FILTER_DARKNESS_6581   = 33.0;    //the bigger the value, the darker the filter control is (that is, cutoff frequency increases less with the same cutoff-value)
+        var FILTER_DISTORTION_6581 = 0.0032;  //the bigger the value the more of resistance-modulation (filter distortion) is applied for 6581 cutoff-control
         
         var OUTPUT_SCALEDOWN = SID_CHANNEL_AMOUNT * 16 + 26; 
         //raw output divided by this after multiplied by main volume, this also compensates for filter-resonance emphasis to avoid distotion
@@ -365,7 +365,7 @@ function jsSID(_bufferlen) {
         function SID(num, baseaddr) { //the SID emulation itself ('num' is the number of SID to iterate (0..2)
             //better keep these variables static so they won't slow down the routine like if they were internal automatic variables always recreated
             var channel, ctrl, SR, prevgate, wf, test;
-            var sReg, vReg; //WARN: pointers
+            var sReg, vReg;
             var accuadd, MSB, pw, wfout;
             var tmp, step, lim, nonfilt, filtin, filtout, output;
             var period, steep, rDS_VCR_FET, cutoff=[0,0,0], resonance=[0,0,0], ftmp;
