@@ -320,7 +320,7 @@ function jsSID(_bufferlen) {
         function cSID_init(samplerate) {
             var i;
             clock_ratio = C64_PAL_CPUCLK/samplerate;
-            if (clock_ratio>9) { ADSRperiods[0]=clock_ratio; ADSRstep[0]=ceil(clock_ratio/9.0);
+            if (clock_ratio>9) { ADSRperiods[0]=clock_ratio; ADSRstep[0]=Math.ceil(clock_ratio/9.0);
             } else { ADSRperiods[0]=9.0; ADSRstep[0]=1; }
             cutoff_ratio_8580 = -2 * 3.14 * (12500 / 2048) / samplerate; // -2 * 3.14 * ((82000/6.8) / 2048) / samplerate; //approx. 30Hz..12kHz according to datasheet, but only for 6.8nF value, 22nF makes 9Hz...3.7kHz? wrong
             cap_6581_reciprocal = -1000000/CAP_6581; //lighten CPU-load in sample-callback
@@ -329,6 +329,9 @@ function jsSID(_bufferlen) {
             //cutoff_top_6581 = 20000; //Hz // (26000/0.47);  // 1 - exp( -2 * 3.14 * (26000/0.47) / samplerate);   //cutoff range is 9 octaves stated by datasheet, but process variation might eliminate any filter spec.
             //cutoff_ratio_6581 = -2 * 3.14 * (cutoff_top_6581 / 2048) / samplerate; //(cutoff_top_6581-cutoff_bottom_6581)/(2048.0-192.0); //datasheet: 30Hz..12kHz with 2.2pF -> 140Hz..56kHz with 470pF?
             
+            TriSaw_8580 = new Array(4096);
+            PulseSaw_8580 = new Array(4096);
+            PulseTriSaw_8580 = new Array(4096);
             createCombinedWF(TriSaw_8580, 0.8, 2.4, 0.64);
             createCombinedWF(PulseSaw_8580, 1.4, 1.9, 0.68);
             createCombinedWF(PulseTriSaw_8580, 0.8, 2.5, 0.64);
@@ -417,7 +420,7 @@ function jsSID(_bufferlen) {
                     wfout = (wf & 0x70) ? 0 : ((tmp & 0x100000) >> 5) + ((tmp & 0x40000) >> 4) + ((tmp & 0x4000) >> 1) + ((tmp & 0x800) << 1) + ((tmp & 0x200) << 2) + ((tmp & 0x20) << 5) + ((tmp & 0x04) << 7) + ((tmp & 0x01) << 8);
                 } 
                 else if (wf & PULSE_BITMASK) { //simple pulse
-                    pw = (memory[vReg+2] + (memory[vReg+3] & 0xF) * 256) * 16;  tmp = (int) accuadd >> 9;  
+                    pw = (memory[vReg+2] + (memory[vReg+3] & 0xF) * 256) * 16;  tmp = accuadd >> 9;  
                     if (0 < pw && pw < tmp) pw = tmp;  tmp ^= 0xFFFF;  if (pw > tmp) pw = tmp;  
                     tmp = phaseaccu[channel] >> 8;
                     if (wf == PULSE_BITMASK) { //simple pulse, most often used waveform, make it sound as clean as possible without oversampling
@@ -464,9 +467,9 @@ function jsSID(_bufferlen) {
                 prevaccu[channel] = phaseaccu[channel]; sourceMSB[num] = MSB;            //(So the decay is not an exact value. Anyway, we just simply keep the value to avoid clicks and support SounDemon digi later...)
               
                 //routing the channel signal to either the filter or the unfiltered master output depending on filter-switch SID-registers
-                if (memory[sReg+0x17] & FILTSW[channel]) filtin += ((int)wfout - 0x8000) * envcnt[channel] / 256;
+                if (memory[sReg+0x17] & FILTSW[channel]) filtin += (wfout - 0x8000) * envcnt[channel] / 256;
                 else if ((FILTSW[channel] != 4) || !(memory[sReg+0x18] & OFF3_BITMASK)) 
-                   nonfilt += ((int)wfout - 0x8000) * envcnt[channel] / 256;
+                   nonfilt += (wfout - 0x8000) * envcnt[channel] / 256;
             }
             //update readable SID1-registers (some SID tunes might use 3rd channel ENV3/OSC3 value as control)
             if(num==0, memory[1]&3) { memory[sReg+0x1B]=wfout>>8; memory[sReg+0x1C]=envcnt[3]; } //OSC3, ENV3 (some players rely on it)    
@@ -479,14 +482,14 @@ function jsSID(_bufferlen) {
             //Even if the MOSFET doesn't conduct at all. 470pF capacitors are small, so 6581 can't go below this cutoff-frequency with 1.5MOhm.)
             cutoff[num] = memory[sReg+0x16] * 8 + (memory[sReg+0x15] & 7);
             if (SID_model[num] == 8580) {
-                cutoff[num] = ( 1 - exp((cutoff[num]+2) * cutoff_ratio_8580) ); //linear curve by resistor-ladder VCR
-                resonance[num] = ( pow(2, ((4 - (memory[sReg+0x17] >> 4)) / 8.0)) );
+                cutoff[num] = ( 1 - Math.exp((cutoff[num]+2) * cutoff_ratio_8580) ); //linear curve by resistor-ladder VCR
+                resonance[num] = ( Math.pow(2, ((4 - (memory[sReg+0x17] >> 4)) / 8.0)) );
             } 
             else { //6581
-                cutoff[num] += round(filtin*FILTER_DISTORTION_6581); //MOSFET-VCR control-voltage-modulation (resistance-modulation aka 6581 filter distortion) emulation
+                cutoff[num] += Math.round(filtin*FILTER_DISTORTION_6581); //MOSFET-VCR control-voltage-modulation (resistance-modulation aka 6581 filter distortion) emulation
                 rDS_VCR_FET = cutoff[num]<=VCR_FET_TRESHOLD ? 100000000.0 //below Vth treshold Vgs control-voltage FET presents an open circuit
                     : cutoff_steepness_6581/(cutoff[num]-VCR_FET_TRESHOLD); // rDS ~ (-Vth*rDSon) / (Vgs-Vth)  //above Vth FET drain-source resistance is proportional to reciprocal of cutoff-control voltage
-                cutoff[num] = ( 1 - exp( cap_6581_reciprocal / (VCR_SHUNT_6581*rDS_VCR_FET/(VCR_SHUNT_6581+rDS_VCR_FET)) / samplerate ) ); //curve with 1.5MOhm VCR parallel Rshunt emulation
+                cutoff[num] = ( 1 - Math.exp( cap_6581_reciprocal / (VCR_SHUNT_6581*rDS_VCR_FET/(VCR_SHUNT_6581+rDS_VCR_FET)) / samplerate ) ); //curve with 1.5MOhm VCR parallel Rshunt emulation
                 resonance[num] = ( (memory[sReg+0x17] > 0x5F) ? 8.0 / (memory[sReg+0x17] >> 4) : 1.41 );
             }  
             filtout=0;
@@ -560,11 +563,12 @@ function jsSID(_bufferlen) {
 
         function createCombinedWF(wfarray, bitmul, bitstrength, treshold) {
             var i,j,k;
+            
             for (i=0; i<4096; i++) { wfarray[i]=0; 
                 for (j=0; j<12;j++) {
                     var bitlevel=0; 
-                    for (k=0; k<12; k++) bitlevel += ( bitmul/pow(bitstrength,fabs(k-j)) ) * (((i>>k)&1)-0.5);
-                    wfarray[i] += (bitlevel>=treshold)? pow(2,j) : 0; } 
+                    for (k=0; k<12; k++) bitlevel += ( bitmul/Math.pow(bitstrength,Math.abs(k-j)) ) * (((i>>k)&1)-0.5);
+                    wfarray[i] += (bitlevel>=treshold)? Math.pow(2,j) : 0; } 
                 wfarray[i]*=12;  
             }
         }
@@ -579,7 +583,7 @@ function jsSID(_bufferlen) {
         function libcsid_init(_samplerate, _sidmodel) {
             samplerate  = _samplerate;
             samplerate  = _samplerate;
-            sampleratio = round(C64_PAL_CPUCLK / samplerate);
+            sampleratio = Math.round(C64_PAL_CPUCLK / samplerate);
             requested_SID_model = _sidmodel;
         }
         
@@ -598,7 +602,7 @@ function jsSID(_bufferlen) {
             console.log("Offset: "+offs+", Loadaddress: "+loadaddr);
 
             for (i = 0; i < 32; i++) {
-                timermode[31 - i] = (filedata[0x12 + (i >> 3)] & (byte)pow(2, 7 - i % 8)) ? 1 : 0;
+                timermode[31 - i] = (filedata[0x12 + (i >> 3)] & Math.pow(2, 7 - i % 8)) ? 1 : 0;
             }
             console.log("Timer modes: " + timermode);
 
@@ -637,7 +641,7 @@ function jsSID(_bufferlen) {
                 }
             }
 
-            initaddr=filedata[0xA]+filedata[0xB]? filedata[0xA]*256+filedata[0xB] : loadaddr; playaddr=playaddf=filedata[0xC]*256+filedata[0xD]; printf("\nInit:$%4.4X,Play:$%4.4X, ",initaddr,playaddr);
+            initaddr=filedata[0xA]+filedata[0xB]? filedata[0xA]*256+filedata[0xB] : loadaddr; playaddr=playaddf=filedata[0xC]*256+filedata[0xD]; console.log("Init: "+initaddr+",Play: "+playaddr);
             subtune_amount=filedata[0xF];
             preferred_SID_model[0] = (filedata[0x77]&0x30)>=0x20? 8580 : 6581;
             preferred_SID_model[1] = (filedata[0x77]&0xC0)>=0x80 ? 8580 : 6581;
