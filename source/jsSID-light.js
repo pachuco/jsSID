@@ -1,16 +1,18 @@
 "use strict";
 function LibJsSIDLight(_samplerate, _sidmodel) {
-    this.initSubtune   = libcsid_initSubtune;   //subtune number
-    this.load          = libcsid_load;          //data object, must convert to Uint8Array
-    this.render        = play;                  //2 chan outputBuffer; number of samples
-    this.getTitle      = libcsid_getTitle;      //no params
-    this.getAuthor     = libcsid_getAuthor;     //no params
-    this.getInfo       = libcsid_getInfo;       //no params
-    this.getSubtuneNum = libcsid_getSubtuneNum; //no params
+    this.initSubtune   = api_initSubtune;   //subtune number
+    this.load          = api_load;          //data object, must convert to Uint8Array
+    this.render        = api_render;        //2 chan outputBuffer; number of samples
+    this.getTitle      = api_getTitle;      //no params
+    this.getAuthor     = api_getAuthor;     //no params
+    this.getInfo       = api_getInfo;       //no params
+    this.getSubtuneNum = api_getSubtuneNum; //no params
+    this.setPlaySpeed  = api_setPlaySpeed;  //float playback speed
     
     // cSID by Hermit (Mihaly Horvath), (Year 2017) http://hermit.sidrip.com
     // an attempt at a usable simple API https://github.com/possan/csid-mod/
     // JS re-port by pachuco https://github.com/pachuco/jsSID
+    // Additions borrowed from JCH's Deepsid.
 
     // (based on jsSID, this version has much lower CPU-usage, as mainloop runs at samplerate)
     // License: WTF - Do what the fuck you want with this code, but please mention me as its original author.
@@ -76,6 +78,7 @@ function LibJsSIDLight(_samplerate, _sidmodel) {
     var initaddr, playaddr, playaddf, SID_address = [0xD400,0,0];
     var samplerate = DEFAULT_SAMPLERATE;
     var framecnt=0, frame_sampleperiod = DEFAULT_SAMPLERATE/PAL_FRAMERATE;
+    var playSpeed=1.0;
     //CPU (and CIA/VIC-IRQ) emulation constants and variables - avoiding internal/automatic variables to retain speed
     var flagsw=[0x01,0x21,0x04,0x24,0x00,0x40,0x08,0x28], branchflag=[0x80,0x40,0x01,0x02];
     var PC=0, pPC=0, addr=0, storadd=0;
@@ -102,12 +105,13 @@ function LibJsSIDLight(_samplerate, _sidmodel) {
         initCPU(playaddr); framecnt=1; finished=0; CPUtime=0; 
     }
     
-    function play(stream, len) { //called by SDL at samplerate pace
+    function api_render(outputBuffer, length) {
         var i,j, samp;
-        var out0 = stream.getChannelData(0);
-        var out1 = stream.getChannelData(1);
-        for(i=0;i<len;i++) {
-            framecnt--; if (framecnt<=0) { framecnt=frame_sampleperiod; finished=0; PC=playaddr; SP=0xFF; } // printf("%d  %f\n",framecnt,playtime); }
+        var out0 = outputBuffer.getChannelData(0);
+        var out1 = outputBuffer.getChannelData(1);
+        for(i=0;i<length;i++) {
+            framecnt--;
+            if (framecnt<=0) { framecnt=frame_sampleperiod; finished=0; PC=playaddr; SP=0xFF; } // printf("%d  %f\n",framecnt,playtime); }
             if (finished==0) { 
                 while (CPUtime<=clock_ratio) {
                     pPC=PC; if (CPU()>=0xFE || ( (memory[1]&3)>1 && pPC<0xE000 && (PC==0xEA31 || PC==0xEA81) ) ) {finished=1;break;} else CPUtime+=cycles; //RTS,RTI and IRQ player ROM return handling
@@ -123,7 +127,7 @@ function LibJsSIDLight(_samplerate, _sidmodel) {
                     if(addr==0xD40B && !(memory[0xD40B]&GATE_BITMASK)) ADSRstate[1]&=0x3E;
                     if(addr==0xD412 && !(memory[0xD412]&GATE_BITMASK)) ADSRstate[2]&=0x3E;
                 }
-                CPUtime-=clock_ratio;
+                CPUtime -= clock_ratio * playSpeed;
             }
             samp = SID(0,0xD400);
             if (SIDamount>=2) samp += SID(1,SID_address[1]); 
@@ -523,17 +527,27 @@ function LibJsSIDLight(_samplerate, _sidmodel) {
     //----------------------------- Exported functions ------------------------------------
     
     
-    function libcsid_getTitle()      { return String.fromCharCode.apply(null, SIDtitle); }
-    function libcsid_getAuthor()     { return String.fromCharCode.apply(null, SIDauthor); }
-    function libcsid_getInfo()       { return String.fromCharCode.apply(null, SIDinfo); }
-    function libcsid_getSubtuneNum() { return subtune_amount; }
+    function api_getTitle()      { return String.fromCharCode.apply(null, SIDtitle); }
+    function api_getAuthor()     { return String.fromCharCode.apply(null, SIDauthor); }
+    function api_getInfo()       { return String.fromCharCode.apply(null, SIDinfo); }
+    function api_getSubtuneNum() { return subtune_amount; }
     
-    function libcsid_initSubtune(sub) {
+    function api_initSubtune(sub) {
         cSID_init(samplerate);
         init(sub);
     }
     
-    function libcsid_load(_buffer, _subtune) {
+    function api_setPlaySpeed(multi) { // Added by JCH
+        playSpeed = multi;
+        if (timermode[subtune] || memory[0xDC05]) { // CIA timing
+            clk_ratio = (C64_PAL_CPUCLK*playSpeed)/samplerate;
+            frame_sampleperiod = (memory[0xDC04]+memory[0xDC05]*256)/clk_ratio;
+        } else {
+            frame_sampleperiod = samplerate/(PAL_FRAMERATE*playSpeed);
+        }
+    }
+    
+    function api_load(_buffer, _subtune) {
         var readata, strend, preferred_SID_model = [8580.0, 8580.0, 8580.0];
         var i, datalen, offs, loadaddr;
 

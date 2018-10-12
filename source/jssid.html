@@ -142,13 +142,11 @@ function main() {
         e.stopPropagation();
         e.preventDefault();
         if (edt.items) {
-            cleanup = edt.items.clear;
             if (edt.items[0].kind === 'file') {
                 url = URL.createObjectURL(edt.items[0].getAsFile());
             }
         } else if (edt.files) {
             var files = edt.files;
-            cleanup = def.clearData;
             if(files.length) {
                 url = URL.createObjectURL(files[0]);
             }
@@ -158,7 +156,9 @@ function main() {
             subtune = 0;
             lp.loadURL(url, xhrLoadCB);
         }
-        cleanup();
+        //if (edt.items) edt.items.clear();
+        //if (edt.files) edt.clearData(); //NoModificationAllowedError: Modifications are not allowed for this document.
+
     }
     
     function renderCB(buffer, length) {
@@ -210,8 +210,14 @@ function main() {
         if (oldsub != subtune) sidcore.initSubtune(subtune);
         updateSubtune();
     }
-    function bFastCB(e)  {
+    function bFastDownCB(e)  {
         if(!isLoaded) return;
+        sidcore.setPlaySpeed(4.0);
+    }
+    
+    function bFastUpCB(e)  {
+        if(!isLoaded) return;
+        sidcore.setPlaySpeed(1.0);
     }
     
     document.addEventListener("dragover", dragoverCB);
@@ -224,7 +230,8 @@ function main() {
     eBPause.addEventListener("click", bPauseCB);
     eBStop.addEventListener("click", bStopCB);
     eBNext.addEventListener("click", bNextCB);
-    eBFast.addEventListener("click", bFastCB);
+    eBFast.addEventListener("mousedown", bFastDownCB);
+    eBFast.addEventListener("mouseup", bFastUpCB);
     
     //url param load
     sidurl = getParam("sid");
