@@ -6,50 +6,126 @@
         <div>Drag-n-drop some sidfiles onto this page.</div>
         <script type="text/javascript" src="jsSID-light.js"></script>
         <script type="text/javascript">
+function LazyPlayer(_bufferlen) {
+    this.play          = play;
+    this.pause         = pause;
+    this.loadURL       = loadURL;
+    this.getSampleRate = getSampleRate
+    this.setRenderCB   = setRenderCB;
+    
+    var node, ctx, isConn, bufferlen;
+    var renderCB;
+    
+    function play() {
+        if(!isConn) node.connect(ctx.destination);
+        isConn = true;
+    }
+    function pause() {
+        if (isConn) node.disconnect(ctx.destination);
+        isConn = false;
+    }
+    function loadURL(url, loadCB) {
+        if (typeof loadCB !== "function") return;
+        var req = new XMLHttpRequest();
+        req.open('GET', url, true);
+        req.responseType = 'arraybuffer';
+
+        req.onreadystatechange = function() {
+            if (req.readyState !== 4) return;
+            if (req.status < 200 || req.status >= 300) return;
+            loadCB(req.response);
+        }.bind(this);
+        req.send(null);
+    }
+    
+    function getSampleRate() { return ctx.sampleRate; }
+    function setRenderCB(cb) { renderCB = cb; }
+    
+    
+    bufferlen = _bufferlen;
+    
+    ctx = new (AudioContext || webkitAudioContext)();
+    if        (typeof ctx.createJavaScriptNode !== "undefined") {
+        node = ctx.createJavaScriptNode(bufferlen, 0, 2);
+    } else if (typeof ctx.createScriptProcessor !== "undefined") {
+        node = ctx.createScriptProcessor(bufferlen, 0, 2);
+    }
+    
+    node.onaudioprocess = function(e) {
+        if (renderCB) renderCB(e.outputBuffer, bufferlen);
+    };
+}
 //-----------------------------------------
 
-var SIDplayer = new jsSID(16384);
+function main() {
+    var lp = new LazyPlayer(16384);
+    var sidcore = new LibJssidLight(lp.getSampleRate(), -1);
+    var sidurl, subsong, reqModel;
 
-function getParam(param) {
-    var urlStr = location.search.substr(1);
-    var result = null;
-    var items = urlStr.split("&");
-    for (var i = 0; i < items.length; i++) {
-        var item = items[i];
-        if(item.substr(0, param.length) !== param) continue;
-        result = item.split("=")[1];
-        break;
+    function getParam(param) {
+        var urlStr = location.search.substr(1);
+        var result = null;
+        var items = urlStr.split("&");
+        for (var i = 0; i < items.length; i++) {
+            var item = items[i];
+            if(item.substr(0, param.length) !== param) continue;
+            result = item.split("=")[1];
+            break;
+        }
+        return result;
     }
-    return result;
-}
-
-var sid = getParam("sid");
-var subsong = getParam("subsong");
-var model = getParam("model");
-if (sid) {
-    //if (model && (model=="6581" || model=="8580")) SIDplayer.setmodel(parseInt(model));
-    SIDplayer.loadURL(sid, subsong);
-}
-
-
-
-document.addEventListener('dragover', function(e) {
-    e.stopPropagation();
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'copy';
-});
-
-document.addEventListener('drop', function(e) {
-    e.stopPropagation();
-    e.preventDefault();
-    var files = e.dataTransfer.files;
-    if(files.length) {
-		var url = URL.createObjectURL(files[0]);
-		SIDplayer.loadURL(url, 0);
+    
+    function xhrLoadCB(data) {
+        sidcore.load(data);
+        lp.play();
     }
-	var url = e.dataTransfer.getData("text/uri-list");
-	if(url) SIDplayer.loadURL(url);
-});
+    function dragoverCB(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+    }
+    
+    function dropCB(e) {
+        var edt = e.dataTransfer;
+        var url;
+        
+        e.stopPropagation();
+        e.preventDefault();
+        if (edt.items) {
+            cleanup = edt.items.clear;
+            if (edt.items[0].kind === 'file') {
+                url = URL.createObjectURL(edt.items[0].getAsFile());
+            }
+        } else if (edt.files) {
+            var files = edt.files;
+            cleanup = def.clearData;
+            if(files.length) {
+                url = URL.createObjectURL(files[0]);
+                lp.loadURL(url, xhrLoadCB);
+            }
+        }
+        if (!url) url = e.dataTransfer.getData("text/uri-list");
+        if (url)  lp.loadURL(url, xhrLoadCB);
+        cleanup();
+    }
+    
+    function renderCB(buffer, length) {
+        sidcore.render(buffer, length);
+    }
+    
+    
+    document.addEventListener('dragover', dragoverCB);
+    document.addEventListener('drop', dropCB);
+    lp.setRenderCB(renderCB);
+    
+    sidurl = getParam("sid");
+    subsong = getParam("subsong");
+    reqModel = getParam("model");
+    if (sidurl) {
+        //if (reqModel && (reqModel==6581 || reqModel==8580)) lp.setmodel(reqModel);
+        lp.loadURL(sidurl, xhrLoadCB);
+    }
+};main();
 
 
         </script>
