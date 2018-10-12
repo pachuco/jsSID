@@ -1,10 +1,33 @@
 <html>
     <head>
         <meta charset="UTF-8">
+        <script type="text/javascript" src="jsSID-light.js"></script>
+        <style>
+#buttrack button{
+    font-family: monospace;
+}
+        </style>
     </head>
     <body>
-        <div>Drag-n-drop some sidfiles onto this page.</div>
-        <script type="text/javascript" src="jsSID-light.js"></script>
+        <div>
+            <div id="infauthor">Author: </div>
+            <div id="inftitle">Title: </div>
+            <div id="infcopy">Copyright: </div>
+            <div id="infsubtune">Subtune: 0/0</div>
+            
+            <div id="buttrack">
+                <button id="bprev"  ><]</button>
+                <button id="bplay"  >=></button>
+                <button id="bpause" >][</button>
+                <button id="bstop"  >[]</button>
+                <button id="bnext"  >[></button>
+                <button id="bfast"  >>></button>
+            </div>
+            <div>&nbsp</div>
+            <div>Drag SID in page or select file below.</div>
+            <input type="file" id="filebrowser">
+        </div>
+        
         <script type="text/javascript">
 function LazyPlayer(_bufferlen) {
     this.play          = play;
@@ -59,8 +82,22 @@ function LazyPlayer(_bufferlen) {
 
 function main() {
     var lp = new LazyPlayer(16384);
-    var sidcore = new LibJssidLight(lp.getSampleRate(), -1);
-    var sidurl, subsong, reqModel;
+    var sidcore = new LibJsSIDLight(lp.getSampleRate(), -1);
+    var sidurl, reqModel;
+    var author="", title="", copy="", subtune=0, subtuneTotal=1;
+    var isLoaded=false, isPlaying=false;
+    
+    var eFileBr  = document.getElementById("filebrowser");
+    var eBPrev   = document.getElementById("bprev");
+    var eBPlay   = document.getElementById("bplay");
+    var eBPause  = document.getElementById("bpause");
+    var eBStop   = document.getElementById("bstop");
+    var eBNext   = document.getElementById("bnext");
+    var eBFast   = document.getElementById("bfast");
+    var iAuthor  = document.getElementById("infauthor");
+    var iTitle   = document.getElementById("inftitle");
+    var iCopy    = document.getElementById("infcopy");
+    var iSubtune = document.getElementById("infsubtune");
 
     function getParam(param) {
         var urlStr = location.search.substr(1);
@@ -75,14 +112,27 @@ function main() {
         return result;
     }
     
-    function xhrLoadCB(data) {
-        sidcore.load(data);
-        lp.play();
+    function xhrLoadCB(_data) {
+        sidcore.load(_data, subtune);
+        isLoaded = true;
+        updateInfo();
+        bPlayCB(null);
     }
     function dragoverCB(e) {
         e.stopPropagation();
         e.preventDefault();
         e.dataTransfer.dropEffect = 'copy';
+    }
+    
+    function fileCB(e) {
+        var files = this.files;
+        if(!files.length) return;
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            subtune = 0;
+            xhrLoadCB(e.target.result);
+        };
+        reader.readAsArrayBuffer(files[0]);
     }
     
     function dropCB(e) {
@@ -101,11 +151,13 @@ function main() {
             cleanup = def.clearData;
             if(files.length) {
                 url = URL.createObjectURL(files[0]);
-                lp.loadURL(url, xhrLoadCB);
             }
         }
         if (!url) url = e.dataTransfer.getData("text/uri-list");
-        if (url)  lp.loadURL(url, xhrLoadCB);
+        if (url) {
+            subtune = 0;
+            lp.loadURL(url, xhrLoadCB);
+        }
         cleanup();
     }
     
@@ -113,13 +165,70 @@ function main() {
         sidcore.render(buffer, length);
     }
     
+    function updateSubtune() {
+        iSubtune.innerHTML = "Subtune: "+(subtune+1)+"/"+subtuneTotal;
+    }
     
-    document.addEventListener('dragover', dragoverCB);
-    document.addEventListener('drop', dropCB);
+    function updateInfo() {
+        subtuneTotal = sidcore.getSubtuneNum();
+        author = sidcore.getAuthor();
+        title  = sidcore.getTitle();
+        copy   = sidcore.getInfo();
+        iAuthor.innerHTML = "Author: " + author;
+        iTitle.innerHTML  = "Title: " + title;
+        iCopy.innerHTML   = "Copyright: " + copy;
+        updateSubtune();
+    }
+    
+    function bPlayCB(e)  {
+        if(!isLoaded) return;
+        lp.play();
+        isPlaying = true;
+    }
+    function bPauseCB(e) {
+        if(!isLoaded) return;
+        lp.pause();
+        isPlaying = false;
+    }
+    function bStopCB(e)  {
+        if(!isLoaded) return;
+        lp.pause();
+        sidcore.initSubtune(subtune);
+        isPlaying = false;
+    }
+    function bNextCB(e)  {
+        if(!isLoaded) return;
+        var oldsub = subtune;
+        subtune = ++subtune % subtuneTotal;
+        if (oldsub != subtune) sidcore.initSubtune(subtune);
+        updateSubtune();
+    }
+    function bPrevCB(e)  {
+        if(!isLoaded) return;
+        var oldsub = subtune;
+        subtune = --subtune<0 ? subtuneTotal-1 : subtune;
+        if (oldsub != subtune) sidcore.initSubtune(subtune);
+        updateSubtune();
+    }
+    function bFastCB(e)  {
+        if(!isLoaded) return;
+    }
+    
+    document.addEventListener("dragover", dragoverCB);
+    document.addEventListener("drop", dropCB);
+    eFileBr.addEventListener("change", fileCB);
     lp.setRenderCB(renderCB);
     
+    eBPrev.addEventListener("click", bPrevCB);
+    eBPlay.addEventListener("click", bPlayCB); 
+    eBPause.addEventListener("click", bPauseCB);
+    eBStop.addEventListener("click", bStopCB);
+    eBNext.addEventListener("click", bNextCB);
+    eBFast.addEventListener("click", bFastCB);
+    
+    //url param load
     sidurl = getParam("sid");
-    subsong = getParam("subsong");
+    subtune = getParam("subtune");
     reqModel = getParam("model");
     if (sidurl) {
         //if (reqModel && (reqModel==6581 || reqModel==8580)) lp.setmodel(reqModel);

@@ -1,17 +1,17 @@
 "use strict";
-function LibJssidLight(_samplerate, _sidmodel) {
-    //this.init          = libcsid_init;
+function LibJsSIDLight(_samplerate, _sidmodel) {
+    this.initSubtune   = libcsid_initSubtune;   //subtune number
     this.load          = libcsid_load;          //data object, must convert to Uint8Array
-    this.render        = libcsid_render;        //2 chan outputBuffer; number of samples
+    this.render        = play;                  //2 chan outputBuffer; number of samples
     this.getTitle      = libcsid_getTitle;      //no params
     this.getAuthor     = libcsid_getAuthor;     //no params
     this.getInfo       = libcsid_getInfo;       //no params
-    this.getSubtuneLen = libcsid_getSubtuneLen; //no params
+    this.getSubtuneNum = libcsid_getSubtuneNum; //no params
     
-    // Based of cSID light - an attempt at a usable simple API https://github.com/possan/csid-mod/
+    // cSID by Hermit (Mihaly Horvath), (Year 2017) http://hermit.sidrip.com
+    // an attempt at a usable simple API https://github.com/possan/csid-mod/
     // JS re-port by pachuco https://github.com/pachuco/jsSID
 
-    // cSID by Hermit (Mihaly Horvath), (Year 2017) http://hermit.sidrip.com
     // (based on jsSID, this version has much lower CPU-usage, as mainloop runs at samplerate)
     // License: WTF - Do what the fuck you want with this code, but please mention me as its original author.
     
@@ -72,7 +72,7 @@ function LibJssidLight(_samplerate, _sidmodel) {
     var SIDauthor = new Uint8Array(0x20);
     var SIDinfo = new Uint8Array(0x20);
     
-    var subtune=0, tunelength=-1, default_tunelength=300, minutes=-1, seconds=-1;
+    var subtune=0, subtune_amount=0;
     var initaddr, playaddr, playaddf, SID_address = [0xD400,0,0];
     var samplerate = DEFAULT_SAMPLERATE;
     var framecnt=0, frame_sampleperiod = DEFAULT_SAMPLERATE/PAL_FRAMERATE;
@@ -526,10 +526,15 @@ function LibJssidLight(_samplerate, _sidmodel) {
     function libcsid_getTitle()      { return String.fromCharCode.apply(null, SIDtitle); }
     function libcsid_getAuthor()     { return String.fromCharCode.apply(null, SIDauthor); }
     function libcsid_getInfo()       { return String.fromCharCode.apply(null, SIDinfo); }
-    function libcsid_getSubtuneLen() { return subtune_amount; }
+    function libcsid_getSubtuneNum() { return subtune_amount; }
+    
+    function libcsid_initSubtune(sub) {
+        cSID_init(samplerate);
+        init(sub);
+    }
     
     function libcsid_load(_buffer, _subtune) {
-        var readata, strend, subtune_amount, preferred_SID_model = [8580.0, 8580.0, 8580.0];
+        var readata, strend, preferred_SID_model = [8580.0, 8580.0, 8580.0];
         var i, datalen, offs, loadaddr;
 
         if(!_buffer) return 0;
@@ -614,10 +619,6 @@ function LibJssidLight(_samplerate, _sidmodel) {
         init(subtune);
 
         return 1;
-    }
-    
-    function libcsid_render(_output, _numsamples) {
-        play(_output, _numsamples);
     }
     
     function _() {
