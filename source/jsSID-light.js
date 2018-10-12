@@ -598,9 +598,10 @@ function jsSID(_bufferlen) {
             var readata, strend, subtune_amount, preferred_SID_model = [8580.0, 8580.0, 8580.0];
             var i, datalen, offs, loadaddr;
 
+            if(!_buffer) return 0;
             filedata = new Uint8Array(_buffer);
-            subtune = _subtune;
-            datalen = _buffer.length;
+            subtune = subtune ? parseInt(_subtune) : 0;
+            datalen = filedata.length;
             if (bufferlen > MAX_DATA_LEN) return 0;
             
 

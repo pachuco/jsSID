@@ -27,8 +27,8 @@ var sid = getParam("sid");
 var subsong = getParam("subsong");
 var model = getParam("model");
 if (sid) {
-    if (model && (model=="6581" || model=="8580")) SIDplayer.setmodel(parseInt(model));
-    SIDplayer.loadURL(sid, subsong?parseInt(subsong):0);
+    //if (model && (model=="6581" || model=="8580")) SIDplayer.setmodel(parseInt(model));
+    SIDplayer.loadURL(sid, subsong);
 }
 
 
