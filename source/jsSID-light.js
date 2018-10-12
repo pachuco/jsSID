@@ -556,9 +556,9 @@ function LibJsSIDLight(_samplerate, _sidmodel) {
 
         if(!_buffer) return 0;
         filedata = new Uint8Array(_buffer);
-        subtune = subtune ? parseInt(_subtune) : 0;
+        subtune = _subtune ? parseInt(_subtune) : 0;
         datalen = filedata.length;
-        if (datalen > MAX_DATA_LEN) return 0;
+        //if (datalen > MAX_DATA_LEN) return 0;
         
 
         offs = filedata[7];

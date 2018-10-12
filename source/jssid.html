@@ -27,7 +27,6 @@
 }
 #buttrack {
     display: inline-block;
-    margin-top: 4px;
     padding: 0px;
     width: auto;
     border-style: solid;
@@ -266,8 +265,8 @@ function main() {
     
     //url param load
     sidurl = getParam("sid");
-    subtune = getParam("subtune");
-    reqModel = getParam("model");
+    subtune = parseInt(getParam("subtune")) - 1;
+    reqModel = parseInt(getParam("model"));
     if (sidurl) {
         //if (reqModel && (reqModel==6581 || reqModel==8580)) lp.setmodel(reqModel);
         lp.loadURL(sidurl, xhrLoadCB);
