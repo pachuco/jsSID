@@ -44,6 +44,7 @@ function LibJsSIDLight(_samplerate, _sidmodel) {
     var LOWPASS_BITMASK=0x10, BANDPASS_BITMASK=0x20, HIGHPASS_BITMASK=0x40, OFF3_BITMASK=0x80;
     
     var clock_ratio=CLOCK_RATIO_DEFAULT;
+    var cr_presped =CLOCK_RATIO_DEFAULT
     
     //SID-emulation variables:
     var FILTSW = [1,2,4,1,2,4,1,2,4];
@@ -116,7 +117,7 @@ function LibJsSIDLight(_samplerate, _sidmodel) {
                 while (CPUtime<=clock_ratio) {
                     pPC=PC; if (CPU()>=0xFE || ( (memory[1]&3)>1 && pPC<0xE000 && (PC==0xEA31 || PC==0xEA81) ) ) {finished=1;break;} else CPUtime+=cycles; //RTS,RTI and IRQ player ROM return handling
                     if ( (addr==0xDC05 || addr==0xDC04) && (memory[1]&3) && timermode[subtune] ) {
-                        frame_sampleperiod = (memory[0xDC04] + memory[0xDC05]*256) / clock_ratio;  //dynamic CIA-setting (Galway/Rubicon workaround)
+                        frame_sampleperiod = (memory[0xDC04] + memory[0xDC05]*256) / cr_presped;  //dynamic CIA-setting (Galway/Rubicon workaround)
                         if (!dynCIA) {dynCIA=1; console.log("( Dynamic CIA settings. New frame-sampleperiod: "+Math.round(frame_sampleperiod)+" samples  ("+samplerate/PAL_FRAMERATE/frame_sampleperiod+" speed) )\n");}
                     }
                     if(storadd>=0xD420 && storadd<0xD800 && (memory[1]&3)) {  //CJ in the USA workaround (writing above $d420, except SID2/SID3)
@@ -127,7 +128,7 @@ function LibJsSIDLight(_samplerate, _sidmodel) {
                     if(addr==0xD40B && !(memory[0xD40B]&GATE_BITMASK)) ADSRstate[1]&=0x3E;
                     if(addr==0xD412 && !(memory[0xD412]&GATE_BITMASK)) ADSRstate[2]&=0x3E;
                 }
-                CPUtime -= clock_ratio * playSpeed;
+                CPUtime -= clock_ratio*playSpeed;
             }
             samp = SID(0,0xD400);
             if (SIDamount>=2) samp += SID(1,SID_address[1]); 
@@ -540,8 +541,8 @@ function LibJsSIDLight(_samplerate, _sidmodel) {
     function api_setPlaySpeed(multi) { // Added by JCH
         playSpeed = multi;
         if (timermode[subtune] || memory[0xDC05]) { // CIA timing
-            clk_ratio = (C64_PAL_CPUCLK*playSpeed)/samplerate;
-            frame_sampleperiod = (memory[0xDC04]+memory[0xDC05]*256)/clk_ratio;
+            cr_presped = (C64_PAL_CPUCLK*playSpeed)/samplerate;
+            frame_sampleperiod = (memory[0xDC04]+memory[0xDC05]*256)/cr_presped;
         } else {
             frame_sampleperiod = samplerate/(PAL_FRAMERATE*playSpeed);
         }
