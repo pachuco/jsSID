@@ -1,8 +1,9 @@
 "use strict";
 function jsSID(_bufferlen) {
-    this.play  = play;
-    this.pause = pause;
-    this.load  = load;
+    this.play     = play;
+    this.pause    = pause;
+    this.loadURL  = loadURL;
+    this.loadData = loadData;
     
     var node, ctx, isConn, bufferlen;
     var sidcore, subtune, filedata;
@@ -30,36 +31,41 @@ function jsSID(_bufferlen) {
     }
     function pause() {
         if (isConn) node.disconnect(ctx.destination);
+        isConn = false;
     }
-    function load(_sidurl, _subt) {
+    function loadURL(_sidurl, _subt) {
         subtune = _subt;
         if (!_sidurl && filedata) {
-            sidcore.load(filedata, _subt);
+            if (sidcore.load(filedata, _subt)) this.play();
         } else {
-            this.pause();
             var req = new XMLHttpRequest();
             req.open('GET', _sidurl, true);
             req.responseType = 'arraybuffer';
 
-            var _play = this.play;
             req.onreadystatechange = function() {
                 if (req.readyState !== 4) return;
                 if (req.status < 200 || req.status >= 300) return;
-                filedata = new Uint8Array(req.response);
-                if (sidcore.load(filedata, _subt)) _play();
-            };
+                this.pause();
+                if (sidcore.load(filedata, _subt)) this.play();
+            }.bind(this);
             req.send(null);
         }
     }
     
+    function loadData(_data, _subt) {
+        this.pause();
+        if (sidcore.load(_data, _subt)) this.play();
+    }
+    
     
     function LibJssidLight() {
-        this.init      = libcsid_init;
-        this.load      = libcsid_load;
-        this.render    = libcsid_render;
-        this.gettitle  = libcsid_gettitle;
-        this.getauthor = libcsid_getauthor;
-        this.getinfo   = libcsid_getinfo;
+        this.init          = libcsid_init;
+        this.load          = libcsid_load;
+        this.render        = libcsid_render;
+        this.getTitle      = libcsid_getTitle;
+        this.getAuthor     = libcsid_getAuthor;
+        this.getInfo       = libcsid_getInfo;
+        this.getSubtuneLen = libcsid_SubtuneLen;
         
         // Based of cSID light - an attempt at a usable simple API
         // JS re-port by pachuco
@@ -576,9 +582,10 @@ function jsSID(_bufferlen) {
         //----------------------------- Exported functions ------------------------------------
         
         
-        function libcsid_gettitle()  { return String.fromCharCode.apply(null, SIDtitle); }
-        function libcsid_getauthor() { return String.fromCharCode.apply(null, SIDauthor); }
-        function libcsid_getinfo()   { return String.fromCharCode.apply(null, SIDinfo); }
+        function libcsid_getTitle()      { return String.fromCharCode.apply(null, SIDtitle); }
+        function libcsid_getAuthor()     { return String.fromCharCode.apply(null, SIDauthor); }
+        function libcsid_getInfo()       { return String.fromCharCode.apply(null, SIDinfo); }
+        function libcsid_getSubtuneLen() { return subtune_amount; }
         
         function libcsid_init(_samplerate, _sidmodel) {
             samplerate  = _samplerate;
@@ -591,7 +598,7 @@ function jsSID(_bufferlen) {
             var readata, strend, subtune_amount, preferred_SID_model = [8580.0, 8580.0, 8580.0];
             var i, datalen, offs, loadaddr;
 
-            filedata = _buffer;
+            filedata = new Uint8Array(_buffer);
             subtune = _subtune;
             datalen = _buffer.length;
             if (bufferlen > MAX_DATA_LEN) return 0;
@@ -599,7 +606,7 @@ function jsSID(_bufferlen) {
 
             offs = filedata[7];
             loadaddr = filedata[8] + filedata[9] ? filedata[8] * 256 + filedata[9] : filedata[offs] + filedata[offs + 1] * 256;
-            console.log("Offset: "+offs+", Loadaddress: "+loadaddr);
+            console.log("Offset: "+offs.toString(16)+", Loadaddress: "+loadaddr.toString(16));
 
             for (i = 0; i < 32; i++) {
                 timermode[31 - i] = (filedata[0x12 + (i >> 3)] & Math.pow(2, 7 - i % 8)) ? 1 : 0;
@@ -641,7 +648,8 @@ function jsSID(_bufferlen) {
                 }
             }
 
-            initaddr=filedata[0xA]+filedata[0xB]? filedata[0xA]*256+filedata[0xB] : loadaddr; playaddr=playaddf=filedata[0xC]*256+filedata[0xD]; console.log("Init: "+initaddr+",Play: "+playaddr);
+            initaddr=filedata[0xA]+filedata[0xB]? filedata[0xA]*256+filedata[0xB] : loadaddr; playaddr=playaddf=filedata[0xC]*256+filedata[0xD];
+            console.log("Init: "+initaddr.toString(16)+",Play: "+playaddr.toString(16));
             subtune_amount=filedata[0xF];
             preferred_SID_model[0] = (filedata[0x77]&0x30)>=0x20? 8580 : 6581;
             preferred_SID_model[1] = (filedata[0x77]&0xC0)>=0x80 ? 8580 : 6581;

@@ -3,11 +3,12 @@
         <meta charset="UTF-8">
     </head>
     <body>
+        <div>Drag-n-drop some sidfiles onto this page.</div>
         <script type="text/javascript" src="jsSID-light.js"></script>
         <script type="text/javascript">
 //-----------------------------------------
 
-var SIDplayer;
+var SIDplayer = new jsSID(16384);
 
 function getParam(param) {
     var urlStr = location.search.substr(1);
@@ -26,10 +27,29 @@ var sid = getParam("sid");
 var subsong = getParam("subsong");
 var model = getParam("model");
 if (sid) {
-    SIDplayer = new jsSID(16384);
-    //if (model && model!="default") SIDplayer.setmodel(model);
-    SIDplayer.load(sid, subsong?subsong:0);
+    if (model && (model=="6581" || model=="8580")) SIDplayer.setmodel(parseInt(model));
+    SIDplayer.loadURL(sid, subsong?parseInt(subsong):0);
 }
+
+
+
+document.addEventListener('dragover', function(e) {
+    e.stopPropagation();
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+});
+
+document.addEventListener('drop', function(e) {
+    e.stopPropagation();
+    e.preventDefault();
+    var files = e.dataTransfer.files;
+    if(files.length) {
+		var url = URL.createObjectURL(files[0]);
+		SIDplayer.loadURL(url, 0);
+    }
+	var url = e.dataTransfer.getData("text/uri-list");
+	if(url) SIDplayer.loadURL(url);
+});
 
 
         </script>
