@@ -3,26 +3,58 @@
         <meta charset="UTF-8">
         <script type="text/javascript" src="jsSID-light.js"></script>
         <style>
-#buttrack button{
+#infmodel {
+    margin-left: 20px;
+    float: right;
+}
+#player {
+    display: inline-block;
+    margin: 1%;
+    padding: 0.5%;
+    background-color: lightgray;
+    width: auto;
+}
+#buttrack button {
     font-family: monospace;
+
+    margin-right: 1px;
+
+
+
+    font-size: 16px;
+    border-color: lightgreen;
+    background-color: lightgreen;
+}
+#buttrack {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 0px;
+    width: auto;
+    border-style: solid;
+    border-width: 4px;
+    border-color: black;
+    background-color: black;
 }
         </style>
     </head>
     <body>
-        <div>
+        <div id="player">
             <div id="infauthor">Author: </div>
             <div id="inftitle">Title: </div>
             <div id="infcopy">Copyright: </div>
-            <div id="infsubtune">Subtune: 0/0</div>
-            
-            <div id="buttrack">
-                <button id="bprev"  ><]</button>
-                <button id="bplay"  >=></button>
-                <button id="bpause" >][</button>
-                <button id="bstop"  >[]</button>
-                <button id="bnext"  >[></button>
-                <button id="bfast"  >>></button>
+            <div>
+                <span id="infsubtune">Subtune: 0/0</span>
+                <span id="infmodel">SID model: </span>
             </div>
+            
+            <span id="buttrack">
+                <button id="bplay"  >=&gt;</button>
+                <button id="bpause" >][</button>
+                <button id="bstop"  >&block;</button>
+                <button id="bprev"  >&lt;</button>
+                <button id="bnext"  >&gt;</button>
+                <button id="bfast"  >&gt;&gt;</button>
+            </span>
             <div>&nbsp</div>
             <div>Drag SID in page or select file below.</div>
             <input type="file" id="filebrowser">
@@ -84,7 +116,7 @@ function main() {
     var lp = new LazyPlayer(16384);
     var sidcore = new LibJsSIDLight(lp.getSampleRate(), -1);
     var sidurl, reqModel;
-    var author="", title="", copy="", subtune=0, subtuneTotal=1;
+    var subtune=0, subtuneTotal=1;
     var isLoaded=false, isPlaying=false;
     
     var eFileBr  = document.getElementById("filebrowser");
@@ -98,6 +130,7 @@ function main() {
     var iTitle   = document.getElementById("inftitle");
     var iCopy    = document.getElementById("infcopy");
     var iSubtune = document.getElementById("infsubtune");
+    var iSid     = document.getElementById("infmodel");
 
     function getParam(param) {
         var urlStr = location.search.substr(1);
@@ -166,17 +199,15 @@ function main() {
     }
     
     function updateSubtune() {
+        subtuneTotal = sidcore.getSubtuneNum();
         iSubtune.innerHTML = "Subtune: "+(subtune+1)+"/"+subtuneTotal;
     }
     
     function updateInfo() {
-        subtuneTotal = sidcore.getSubtuneNum();
-        author = sidcore.getAuthor();
-        title  = sidcore.getTitle();
-        copy   = sidcore.getInfo();
-        iAuthor.innerHTML = "Author: " + author;
-        iTitle.innerHTML  = "Title: " + title;
-        iCopy.innerHTML   = "Copyright: " + copy;
+        iAuthor.innerHTML = "Author: " + sidcore.getAuthor();
+        iTitle.innerHTML  = "Title: " + sidcore.getTitle();
+        iCopy.innerHTML   = "Copyright: " + sidcore.getInfo();
+        iSid.innerHTML    = "SID model: " + sidcore.getPrefModel();
         updateSubtune();
     }
     

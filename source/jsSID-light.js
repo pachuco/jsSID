@@ -7,6 +7,7 @@ function LibJsSIDLight(_samplerate, _sidmodel) {
     this.getAuthor     = api_getAuthor;     //no params
     this.getInfo       = api_getInfo;       //no params
     this.getSubtuneNum = api_getSubtuneNum; //no params
+    this.getPrefModel  = api_getPrefModel;  //no params
     this.setPlaySpeed  = api_setPlaySpeed;  //float playback speed
     
     // cSID by Hermit (Mihaly Horvath), (Year 2017) http://hermit.sidrip.com
@@ -93,7 +94,7 @@ function LibJsSIDLight(_samplerate, _sidmodel) {
     
     function init(subt) {
         var timeout;
-        subtune = subt; initCPU(initaddr); initSID(); A=subtune; memory[1]=0x37; memory[0xDC05]=0;
+        subtune = subt; initCPU(initaddr); resetSID(); A=subtune; memory[1]=0x37; memory[0xDC05]=0;
         for(timeout=100000;timeout>=0;timeout--) { if (CPU()) break; } 
         if (timermode[subtune] || memory[0xDC05]) { //&& playaddf {   //CIA timing
             if (!memory[0xDC05]) {memory[0xDC04]=0x24; memory[0xDC05]=0x40;} //C64 startup-default
@@ -113,7 +114,7 @@ function LibJsSIDLight(_samplerate, _sidmodel) {
         for(i=0;i<length;i++) {
             framecnt--;
             if (framecnt<=0) { framecnt=frame_sampleperiod; finished=0; PC=playaddr; SP=0xFF; } // printf("%d  %f\n",framecnt,playtime); }
-            if (finished==0) { 
+            if (finished==0) {
                 while (CPUtime<=clock_ratio) {
                     pPC=PC; if (CPU()>=0xFE || ( (memory[1]&3)>1 && pPC<0xE000 && (PC==0xEA31 || PC==0xEA81) ) ) {finished=1;break;} else CPUtime+=cycles; //RTS,RTI and IRQ player ROM return handling
                     if ( (addr==0xDC05 || addr==0xDC04) && (memory[1]&3) && timermode[subtune] ) {
@@ -281,9 +282,9 @@ function LibJsSIDLight(_samplerate, _sidmodel) {
         //cutoff_top_6581 = 20000; //Hz // (26000/0.47);  // 1 - exp( -2 * 3.14 * (26000/0.47) / samplerate);   //cutoff range is 9 octaves stated by datasheet, but process variation might eliminate any filter spec.
         //cutoff_ratio_6581 = -2 * 3.14 * (cutoff_top_6581 / 2048) / samplerate; //(cutoff_top_6581-cutoff_bottom_6581)/(2048.0-192.0); //datasheet: 30Hz..12kHz with 2.2pF -> 140Hz..56kHz with 470pF?
         
-        TriSaw_8580 = new Array(4096);
-        PulseSaw_8580 = new Array(4096);
-        PulseTriSaw_8580 = new Array(4096);
+        TriSaw_8580 = new Uint32Array(4096);
+        PulseSaw_8580 = new Uint32Array(4096);
+        PulseTriSaw_8580 = new Uint32Array(4096);
         createCombinedWF(TriSaw_8580, 0.8, 2.4, 0.64);
         createCombinedWF(PulseSaw_8580, 1.4, 1.9, 0.68);
         createCombinedWF(PulseTriSaw_8580, 0.8, 2.5, 0.64);
@@ -297,12 +298,12 @@ function LibJsSIDLight(_samplerate, _sidmodel) {
             sourceMSBrise[i] = 0; sourceMSB[i] = 0;
             prevlowpass[i] = 0; prevbandpass[i] = 0;
         }
-        initSID();
+        resetSID();
     }
     
     //registers: 0:freql1  1:freqh1  2:pwml1  3:pwmh1  4:ctrl1  5:ad1   6:sr1  7:freql2  8:freqh2  9:pwml2 10:pwmh2 11:ctrl2 12:ad2  13:sr 14:freql3 15:freqh3 16:pwml3 17:pwmh3 18:ctrl3 19:ad3  20:sr3 
     //           21:cutoffl 22:cutoffh 23:flsw_reso 24:vol_ftype 25:potX 26:potY 27:OSC3 28:ENV3
-    function initSID() { 
+    function resetSID() { 
         var i;
         for(i=0xD400;i<=0xD7FF;i++) memory[i]=0; for(i=0xDE00;i<=0xDFFF;i++) memory[i]=0;
         for(i=0;i<9;i++) {ADSRstate[i]=HOLDZERO_BITMASK; ratecnt[i]=envcnt[i]=expcnt[i]=0;} 
@@ -532,6 +533,7 @@ function LibJsSIDLight(_samplerate, _sidmodel) {
     function api_getAuthor()     { return String.fromCharCode.apply(null, SIDauthor); }
     function api_getInfo()       { return String.fromCharCode.apply(null, SIDinfo); }
     function api_getSubtuneNum() { return subtune_amount; }
+    function api_getPrefModel()  { return SID_model[0]; }
     
     function api_initSubtune(sub) {
         cSID_init(samplerate);
