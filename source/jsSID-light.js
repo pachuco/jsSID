@@ -49,20 +49,20 @@ function LibJsSIDLight(_samplerate, _sidmodel) {
     
     //SID-emulation variables:
     var FILTSW = [1,2,4,1,2,4,1,2,4];
-    var ADSRstate = [0,0,0,0,0,0,0,0,0];
-    var expcnt = [0,0,0,0,0,0,0,0,0];
-    var prevSR = [0,0,0,0,0,0,0,0,0];
-    var sourceMSBrise = [0,0,0,0,0,0,0,0,0];
-    var envcnt = [0,0,0,0,0,0,0,0,0];
-    var prevwfout = [0,0,0,0,0,0,0,0,0];
-    var prevwavdata = [0,0,0,0,0,0,0,0,0];
-    var sourceMSB = [0,0,0];
-    var noise_LFSR = [0,0,0,0,0,0,0,0,0];
-    var phaseaccu = [0,0,0,0,0,0,0,0,0];
-    var prevaccu = [0,0,0,0,0,0,0,0,0];
-    var prevlowpass = [0,0,0];
-    var prevbandpass = [0,0,0];
-    var ratecnt = [0,0,0,0,0,0,0,0,0];
+    var ADSRstate = new Uint8Array([0,0,0,0,0,0,0,0,0]);
+    var expcnt = new Uint8Array([0,0,0,0,0,0,0,0,0]);
+    var prevSR = new Uint8Array([0,0,0,0,0,0,0,0,0]);
+    var sourceMSBrise = new Uint8Array([0,0,0,0,0,0,0,0,0]);
+    var envcnt = new Int16Array([0,0,0,0,0,0,0,0,0]);
+    var prevwfout = new Uint32Array([0,0,0,0,0,0,0,0,0]);
+    var prevwavdata = new Uint32Array([0,0,0,0,0,0,0,0,0]);
+    var sourceMSB = new Uint32Array([0,0,0]);
+    var noise_LFSR = new Uint32Array([0,0,0,0,0,0,0,0,0]);
+    var phaseaccu = new Int32Array([0,0,0,0,0,0,0,0,0]);
+    var prevaccu = new Int32Array([0,0,0,0,0,0,0,0,0]);
+    var prevlowpass = new Int32Array([0,0,0]);
+    var prevbandpass = new Int32Array([0,0,0]);
+    var ratecnt = new Float32Array([0,0,0,0,0,0,0,0,0]);
     var cutoff_ratio_8580, cutoff_steepness_6581, cap_6581_reciprocal;
     //, cutoff_ratio_6581, cutoff_bottom_6581, cutoff_top_6581;
     
