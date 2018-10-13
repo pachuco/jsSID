@@ -85,9 +85,9 @@ function LazyPlayer(_bufferlen) {
         req.responseType = 'arraybuffer';
 
         req.onreadystatechange = function() {
+            var s = req.status;
             if (req.readyState !== 4) return;
-            if (req.status < 200 || req.status >= 300) return;
-            loadCB(req.response);
+            if (s == 0 || (s >= 200 && s < 300)) loadCB(req.response);
         }.bind(this);
         req.send(null);
     }
