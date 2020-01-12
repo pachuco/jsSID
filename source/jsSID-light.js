@@ -425,7 +425,7 @@ function LibJsSIDLight(_samplerate, _sidmodel) {
                nonfilt += (wfout - 0x8000) * envcnt[channel] / 256;
         }
         //update readable SID1-registers (some SID tunes might use 3rd channel ENV3/OSC3 value as control)
-        if(num==0, memory[1]&3) { memory[sReg+0x1B]=wfout>>8; memory[sReg+0x1C]=envcnt[3]; } //OSC3, ENV3 (some players rely on it)    
+        if(num==0 && memory[1]&3) { memory[sReg+0x1B]=wfout>>8; memory[sReg+0x1C]=envcnt[3]; } //OSC3, ENV3 (some players rely on it)    
        
         //FILTER: two integrator loop bi-quadratic filter, workings learned from resid code, but I kindof simplified the equations
         //The phases of lowpass and highpass outputs are inverted compared to the input, but bandpass IS in phase with the input signal.
